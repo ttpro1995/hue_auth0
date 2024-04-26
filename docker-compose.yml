@@ -1,0 +1,35 @@
+services:
+  hue:
+    # image: gethue/hue:latest
+    build: ./hue-build
+    ports:
+      - "8888:8888"  # Map container port 8888 to host port 8888
+    # environment:
+    #   # Add any additional environment variables needed by Hue here
+    volumes:
+      # Add any volume mounts needed for persistence here
+      # - ./hue-build/mnt/config/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+      - ./hue-build/mnt/config/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+  postgres:
+    image: postgres:16.2
+    ports: 
+      - 0.0.0.0:5432:5432
+    environment:
+      POSTGRES_USER: meowuser  # Username for PostgreSQL
+      POSTGRES_PASSWORD: meowmeow  # Password for PostgreSQL (change this!)
+    volumes:
+      - postgres_data2:/var/lib/postgresql/data  # Persistent storage for database
+
+  # pgadmindesktop:
+  #   image: dpage/pgadmin4:8.5
+  #   ports:
+  #     # - "80:5050"  # Map pgAdmin port to host port 5050
+  #     - 5050:80
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@meow.com  # Default pgAdmin email
+  #     PGADMIN_DEFAULT_PASSWORD: admin  # Default pgAdmin password (change this!)
+  #   depends_on:
+  #     - postgres  # Start pgAdmin after PostgreSQL
+
+volumes:
+  postgres_data2: {}  # Define an empty volume for persistent storage
