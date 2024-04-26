@@ -2,6 +2,9 @@ services:
   hue:
     # image: gethue/hue:latest
     build: ./hue-build
+    depends_on:
+      - postgres  # Start pgAdmin after PostgreSQL
+      #- namenode
     ports:
       - "8888:8888"  # Map container port 8888 to host port 8888
     # environment:
@@ -10,6 +13,10 @@ services:
       # Add any volume mounts needed for persistence here
       # - ./hue-build/mnt/config/hue.ini:/usr/share/hue/desktop/conf/hue.ini
       - ./hue-build/mnt/config/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+    networks:
+      - hbase
+
+
   postgres:
     image: postgres:16.2
     ports: 
@@ -19,51 +26,94 @@ services:
       POSTGRES_PASSWORD: meowmeow  # Password for PostgreSQL (change this!)
     volumes:
       - postgres_data2:/var/lib/postgresql/data  # Persistent storage for database
+    networks:
+      - hbase
+    command: ["postgres", "-c", "shared_buffers=2560MB", "-c", "max_connections=200"]
 
-  # pgadmindesktop:
-  #   image: dpage/pgadmin4:8.5
-  #   ports:
-  #     # - "80:5050"  # Map pgAdmin port to host port 5050
-  #     - 5050:80
+#######################################
+
+  # namenode:
+  #   image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+  #   volumes:
+  #     - namenode:/hadoop/dfs/name
+  #   networks:
+  #     - hbase
   #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@meow.com  # Default pgAdmin email
-  #     PGADMIN_DEFAULT_PASSWORD: admin  # Default pgAdmin password (change this!)
-  #   depends_on:
-  #     - postgres  # Start pgAdmin after PostgreSQL
-  namenode:
-    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
-    volumes:
-      - namenode:/hadoop/dfs/name
-    environment:
-      - CLUSTER_NAME=test
-    env_file:
-      - ./hadoop.env
-    deploy:
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints:
-          - node.hostname == akswnc4.aksw.uni-leipzig.de
+  #     - CLUSTER_NAME=test
+  #   env_file:
+  #     - ./hadoop.env
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
 
 
-  datanode:
-    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    volumes:
-      - datanode:/hadoop/dfs/data
-    env_file:
-      - ./hadoop.env
-    environment:
-      SERVICE_PRECONDITION: "namenode:50070"
-    deploy:
-      mode: global
-      restart_policy:
-        condition: on-failure
+  # datanode:
+  #   image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+  #   volumes:
+  #     - datanode:/hadoop/dfs/data
+  #   networks:
+  #     - hbase
+  #   env_file:
+  #     - ./hadoop.env
+  #   environment:
+  #     SERVICE_PRECONDITION: "namenode:50070"
+  #   deploy:
+  #     mode: global
+  #     restart_policy:
+  #       condition: on-failure
 
+  # nodemanager:
+  #   image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+  #   environment:
+  #     SERVICE_PRECONDITION: "namenode:50070 datanode:50075 resourcemanager:8088"
+  #   env_file:
+  #     - ./hadoop.env
+  #   networks:
+  #     - hbase
+  #   deploy:
+  #     mode: global
+  #     restart_policy:
+  #       condition: on-failure
+
+
+  # historyserver:
+  #   image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+  #   volumes:
+  #     - hadoop_historyserver:/hadoop/yarn/timeline
+  #   networks:
+  #     - hbase
+  #   environment:
+  #     SERVICE_PRECONDITION: "namenode:50070 datanode:50075 resourcemanager:8088"
+  #   env_file:
+  #     - ./hadoop.env
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 1
+
+  # resourcemanager:
+  #   image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+  #   environment:
+  #     SERVICE_PRECONDITION: "namenode:50070 datanode:50075"
+  #   env_file:
+  #     - ./hadoop.env
+  #   networks:
+  #     - hbase
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
+  #   healthcheck:
+  #     disable: true
 
 
 volumes:
   postgres_data2: {}  # Define an empty volume for persistent storage
   datanode: {}
   namenode: {}
+  hadoop_historyserver: {}
+
+networks:
+  hbase:
