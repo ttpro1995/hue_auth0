@@ -3,7 +3,8 @@ services:
     # image: gethue/hue:latest
     build: ./hue-build
     ports:
-      - "8888:8888"  # Map container port 8888 to host port 8888
+      #- "8888:8888"  # Map container port 8888 to host port 8888
+      - "0.0.0.0:50000:8888"
     # environment:
     #   # Add any additional environment variables needed by Hue here
     volumes:
@@ -19,6 +20,7 @@ services:
       POSTGRES_PASSWORD: meowmeow  # Password for PostgreSQL (change this!)
     volumes:
       - postgres_data2:/var/lib/postgresql/data  # Persistent storage for database
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=200"]
 
   # pgadmindesktop:
   #   image: dpage/pgadmin4:8.5
